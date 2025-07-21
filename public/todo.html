@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToDo วิชา</title>
+  <link rel="stylesheet" href="/styles/styles/main.css">
+  <link rel="stylesheet" href="styles/styles/todo.css">
+  <!-- Firebase SDK (Compat version) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="/scripts/env.js"></script>
+  <script>
+    // ตรวจสอบ env
+    console.log('window.env', window.env);
+    function mapEnvToFirebaseConfig(env) {
+      return {
+        apiKey: env.FIREBASE_API_KEY,
+        authDomain: env.FIREBASE_AUTH_DOMAIN,
+        projectId: env.FIREBASE_PROJECT_ID,
+        storageBucket: env.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
+        appId: env.FIREBASE_APP_ID,
+        measurementId: env.FIREBASE_MEASUREMENT_ID
+      };
+    }
+    let firebaseConfig = mapEnvToFirebaseConfig(window.env);
+    if (!firebaseConfig || !firebaseConfig.projectId) {
+      alert('Firebase config (env.js) ไม่ถูกโหลดหรือไม่มีค่า projectId');
+      // fallback: hardcode config (กรณี dev)
+      firebaseConfig = {
+        apiKey: "AIzaSyC452vdQ6_77OWElN6vvEbAzn_lA4DvPk0",
+        authDomain: "beit67.firebaseapp.com",
+        projectId: "beit67",
+        storageBucket: "beit67.appspot.com",
+        messagingSenderId: "909474812266",
+        appId: "1:909474812266:web:c69149ad52c43085441513",
+        measurementId: "G-SFPMXYCJNG"
+      };
+    }
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+  </script>
+</head>
+<body>
+  <div id="todo-app-container">
+    <h1 id="subject-title">ToDo วิชา</h1>
+    <div id="todo-list-container">
+      <ul id="todo-list"></ul>
+    </div>
+    <form id="add-todo-form">
+      <input type="text" id="todo-input" placeholder="เพิ่มสิ่งที่ต้องทำ..." required>
+      <input type="datetime-local" id="todo-due" required>
+      <button type="submit" class="button-primary">เพิ่ม ToDo</button>
+    </form>
+    <button id="back-btn" class="button-secondary">ย้อนกลับ</button>
+  </div>
+  <script src="/scripts/scripts/session.js"></script>
+  <script src="/scripts/scripts/todo.js"></script>
+</body>
+</html> 

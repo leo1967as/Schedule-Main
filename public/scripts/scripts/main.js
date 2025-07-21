@@ -237,6 +237,14 @@ window.db = db;
     });
 
     tableContainer.addEventListener('click', (e) => {
+        if (!isEditMode) {
+            const block = e.target.closest('.class-block');
+            if (block) {
+                // Redirect ไปหน้า ToDo โดยส่ง name วิชาไปใน query string
+                window.location.href = `/todo.html?name=${encodeURIComponent(block.dataset.name)}`;
+                return;
+            }
+        }
         if (!isEditMode) return; 
         const block = e.target.closest('.class-block');
         if (block) {

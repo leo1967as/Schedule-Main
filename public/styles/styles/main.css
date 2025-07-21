@@ -478,7 +478,6 @@ h1 {
 /* ในโหมดปกติ (View Mode) ให้บล็อกคลิกไม่ได้ */
 .view-mode .class-block {
     cursor: default;
-    pointer-events: none;
 }
 
 /* ในโหมดปกติ (View Mode) ให้ซ่อนปุ่มเพิ่มวิชา */
