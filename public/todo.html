@@ -43,18 +43,482 @@
   </script>
 </head>
 <body>
-  <div id="todo-app-container">
-    <h1 id="subject-title">ToDo วิชา</h1>
+  <div id="loading-overlay" style="position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;letter-spacing:2px;">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <div>Loading...</div>
+    </div>
+  </div>
+  
+  <div id="todo-app-container" style="display:none;">
+    <div class="app-header">
+      <h1 id="subject-title">ToDo วิชา</h1>
+      
+      <!-- Progress Bar -->
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div class="progress-text">
+          <span id="completed-count">0</span>/<span id="total-count">0</span> เสร็จแล้ว
+        </div>
+      </div>
+      
+      <!-- Filter and Sort Options -->
+      <div class="controls-section">
+        <div class="filter-controls">
+          <button id="filter-all" class="filter-btn active">ทั้งหมด</button>
+          <button id="filter-pending" class="filter-btn">รอดำเนินการ</button>
+          <button id="filter-completed" class="filter-btn">เสร็จแล้ว</button>
+          <button id="filter-overdue" class="filter-btn">เกินกำหนด</button>
+        </div>
+        
+        <div class="sort-controls">
+          <select id="sort-select">
+            <option value="date-asc">วันที่เก่า → ใหม่</option>
+            <option value="date-desc">วันที่ใหม่ → เก่า</option>
+            <option value="priority-desc">ความสำคัญสูง → ต่ำ</option>
+            <option value="alphabetical">เรียงตามตัวอักษร</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-section">
+      <input type="text" id="search-input" placeholder="🔍 ค้นหา ToDo..." autocomplete="off">
+      <button id="clear-search" class="clear-btn" style="display:none;">✕</button>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-section">
+      <div class="stat-card">
+        <div class="stat-number" id="today-count">0</div>
+        <div class="stat-label">วันนี้</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="overdue-count">0</div>
+        <div class="stat-label">เกินกำหนด</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="upcoming-count">0</div>
+        <div class="stat-label">ใกล้ถึงกำหนด</div>
+      </div>
+    </div>
+
+    <!-- Todo List -->
     <div id="todo-list-container">
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <div class="empty-icon">📝</div>
+        <h3>ยังไม่มี ToDo</h3>
+        <p>เริ่มต้นโดยการเพิ่ม ToDo แรกของคุณ!</p>
+      </div>
       <ul id="todo-list"></ul>
     </div>
-    <form id="add-todo-form">
-      <input type="text" id="todo-input" placeholder="เพิ่มสิ่งที่ต้องทำ..." required>
-      <input type="datetime-local" id="todo-due" required>
-      <button type="submit" class="button-primary">เพิ่ม ToDo</button>
-    </form>
-    <button id="back-btn" class="button-secondary">ย้อนกลับ</button>
+
+    <!-- Add Todo Form -->
+    <div class="add-todo-section">
+      <form id="add-todo-form">
+        <div class="form-group">
+          <input type="text" id="todo-input" placeholder="เพิ่มสิ่งที่ต้องทำ..." required>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="todo-due">กำหนดส่ง:</label>
+            <input type="datetime-local" id="todo-due" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="todo-priority">ความสำคัญ:</label>
+            <select id="todo-priority">
+              <option value="low">ต่ำ</option>
+              <option value="medium" selected>ปานกลาง</option>
+              <option value="high">สูง</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="todo-category">หมวดหมู่:</label>
+          <select id="todo-category">
+            <option value="assignment">การบ้าน</option>
+            <option value="exam">สอบ</option>
+            <option value="project">โปรเจค</option>
+            <option value="reading">อ่าน</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <textarea id="todo-notes" placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)" rows="3"></textarea>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="button-primary">
+            <span class="btn-icon">+</span>
+            เพิ่ม ToDo
+          </button>
+          <button type="button" id="quick-add-btn" class="button-secondary">
+            เพิ่มด่วน
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button id="export-btn" class="button-secondary">
+        📤 ส่งออกข้อมูล
+      </button>
+      <button id="clear-completed-btn" class="button-danger">
+        🗑️ ลบที่เสร็จแล้ว
+      </button>
+      <button id="back-btn" class="button-secondary">
+        ← ย้อนกลับ
+      </button>
+    </div>
   </div>
+
+  <!-- Notification Container -->
+  <div id="notification-container"></div>
+
+  <!-- Confirmation Modal -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3 id="modal-title">ยืนยันการดำเนินการ</h3>
+      <p id="modal-message"></p>
+      <div class="modal-actions">
+        <button id="modal-confirm" class="button-danger">ยืนยัน</button>
+        <button id="modal-cancel" class="button-secondary">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/scripts/scripts/todo.js"></script>
+  
+  <!-- Additional Styles for New Features -->
+  <style>
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .app-header {
+      margin-bottom: 2rem;
+    }
+    
+    .progress-container {
+      margin: 1rem 0;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50, #45a049);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-weight: bold;
+      color: #666;
+    }
+    
+    .controls-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+    
+    .filter-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .filter-btn.active,
+    .filter-btn:hover {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    
+    .search-section {
+      position: relative;
+      margin: 1rem 0;
+    }
+    
+    .search-section input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    
+    .clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #999;
+    }
+    
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+    
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #007bff;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 0.5rem;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #666;
+    }
+    
+    .empty-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    
+    .add-todo-section {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin: 2rem 0;
+      border: 1px solid #e9ecef;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+    
+    .btn-icon {
+      margin-right: 0.5rem;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .button-danger {
+      background-color: #dc3545;
+      color: white;
+      border: 2px solid #dc3545;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    
+    .button-danger:hover {
+      background-color: #c82333;
+      border-color: #c82333;
+    }
+    
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    
+    .modal {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+    
+    #notification-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9998;
+    }
+    
+    .notification {
+      background: #28a745;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      animation: slideIn 0.3s ease;
+    }
+    
+    .notification.error {
+      background: #dc3545;
+    }
+    
+    .notification.warning {
+      background: #ffc107;
+      color: #212529;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .controls-section {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filter-controls {
+        justify-content: center;
+      }
+      
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .form-actions {
+        justify-content: stretch;
+      }
+      
+      .form-actions button {
+        flex: 1;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+      
+      .stats-section {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
 </body>
-</html> 
+</html>
