@@ -1,0 +1,9 @@
+{
+  "name": "schedule-main",
+  "version": "1.0.0",
+  "description": "Schedule app with secure Firebase config via env.js",
+  "scripts": {
+    "prebuild": "node scripts/generate-env.js",
+    "build": "echo 'No build step needed for static site'"
+  }
+} 
