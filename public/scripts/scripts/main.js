@@ -4,7 +4,7 @@ import { updateCountdown, formatTime } from './countdown.js';
 import { initializeDragAndDrop } from './dragdrop.js';
 import { shareSchedule, copyUrl } from './share.js';
 import { setupNotifications, updateNotificationButton, cancelNotifications } from './notification.js';
-import { getCurrentUser, setCurrentUser, clearCurrentUser } from './session.js';
+// import { getCurrentUser, setCurrentUser, clearCurrentUser } from './session.js';
 import { init } from './init.js';
 
 const hideLoadingOverlay = () => {
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ฟังก์ชัน wrapper สำหรับบันทึกตาราง ---
     function saveSchedule(scheduleBody) {
-        const user = getCurrentUser();
+        const user = window.getCurrentUser();
         console.log('saveSchedule: user=', user, 'db=', db, 'scheduleBody=', scheduleBody);
         return saveScheduleToFirestore(db, user, scheduleBody);
     }
@@ -165,7 +165,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 window.createClassBlock = createClassBlock;
 window.getFirestoreDB = () => db;
-window.getCurrentUser = () => getCurrentUser();
+// ถ้า session.js โหลดก่อนแล้ว window.getCurrentUser มีอยู่แล้ว ไม่ต้องเซ็ตซ้ำ
+// หรือถ้าจะเซ็ต ให้ชี้ไปที่ localStorage ตรงๆ
+window.getCurrentUser = function() {
+    return localStorage.getItem('currentScheduleAppUser');
+};
 window.getScheduleBody = () => document.getElementById('schedule-body');
 window.saveScheduleToFirestore = () => {
   const db = window.getFirestoreDB();
@@ -383,7 +387,7 @@ window.db = db;
         const scheduleData = Array.from(allBlocks).map(block => ({ ...block.dataset }));
         const jsonString = JSON.stringify(scheduleData);
         const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
-        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedData}&user=${encodeURIComponent(currentUser)}`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedData}&user=${encodeURIComponent(window.getCurrentUser())}`;
         shareUrlInput.value = shareUrl;
         shareModal.querySelector('.close-btn').onclick = () => shareModal.classList.remove('show');
         shareModal.classList.add('show');
@@ -543,14 +547,14 @@ window.db = db;
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             console.log('Notification permission granted.');
-            await setupNotifications(_firebase, db, getCurrentUser(), notificationsBtn, saveTokenToFirestore, updateNotificationButton);
+            await setupNotifications(_firebase, db, window.getCurrentUser(), notificationsBtn, saveTokenToFirestore, updateNotificationButton);
         } else {
             console.log('Unable to get permission to notify.');
             alert('คุณต้องอนุญาตการแจ้งเตือนในตั้งค่าของเบราว์เซอร์');
         }
     });
     cancelNotificationsBtn.addEventListener('click', async () => {
-        await cancelNotifications(_firebase, db, getCurrentUser(), notificationsBtn, updateNotificationButton);
+        await cancelNotifications(_firebase, db, window.getCurrentUser(), notificationsBtn, updateNotificationButton);
     });
 
     // ฟังก์ชันสำหรับแสดง Notification ผ่าน Service Worker ถ้าได้, ถ้าไม่ได้ fallback เป็น Notification API
@@ -649,7 +653,7 @@ window.db = db;
             loadScheduleFromFirestore,
             setupNotifications,
             updateCountdown,
-            getCurrentUser,
+            getCurrentUser: window.getCurrentUser,
             db,
             createClassBlock,
             setBlockIdCounter: (val) => { blockIdCounter = val; },
