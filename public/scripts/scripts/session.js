@@ -1,13 +1,11 @@
-function getCurrentUser() {
+export function getCurrentUser() {
     return localStorage.getItem('currentScheduleAppUser');
 }
-function setCurrentUser(userId) {
+
+export function setCurrentUser(userId) {
     localStorage.setItem('currentScheduleAppUser', userId);
 }
-function clearCurrentUser() {
+
+export function clearCurrentUser() {
     localStorage.removeItem('currentScheduleAppUser');
-}
-// Attach to window for global access
-window.getCurrentUser = getCurrentUser;
-window.setCurrentUser = setCurrentUser;
-window.clearCurrentUser = clearCurrentUser; 
+} 

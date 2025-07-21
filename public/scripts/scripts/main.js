@@ -4,7 +4,7 @@ import { updateCountdown, formatTime } from './countdown.js';
 import { initializeDragAndDrop } from './dragdrop.js';
 import { shareSchedule, copyUrl } from './share.js';
 import { setupNotifications, updateNotificationButton, cancelNotifications } from './notification.js';
-// import { getCurrentUser, setCurrentUser, clearCurrentUser } from './session.js';
+import { getCurrentUser, setCurrentUser, clearCurrentUser } from './session.js';
 import { init } from './init.js';
 
 const hideLoadingOverlay = () => {
@@ -15,14 +15,17 @@ const hideLoadingOverlay = () => {
 document.addEventListener('DOMContentLoaded', () => {
     // --- 1. การตั้งค่า Firebase ---
     const firebaseConfig = {
-        apiKey: window.env.FIREBASE_API_KEY,
-        authDomain: window.env.FIREBASE_AUTH_DOMAIN,
-        projectId: window.env.FIREBASE_PROJECT_ID,
-        storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
-        appId: window.env.FIREBASE_APP_ID,
-        measurementId: window.env.FIREBASE_MEASUREMENT_ID
+        apiKey: import.meta.env?.VITE_FIREBASE_API_KEY || window.env?.FIREBASE_API_KEY,
+        authDomain: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || window.env?.FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env?.VITE_FIREBASE_PROJECT_ID || window.env?.FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || window.env?.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || window.env?.FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env?.VITE_FIREBASE_APP_ID || window.env?.FIREBASE_APP_ID,
+        measurementId: import.meta.env?.VITE_FIREBASE_MEASUREMENT_ID || window.env?.FIREBASE_MEASUREMENT_ID
     };
+    if (!firebaseConfig.projectId) {
+        alert('Firebase config is missing! Please check env.js and your build setup.');
+    }
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -90,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ฟังก์ชัน wrapper สำหรับบันทึกตาราง ---
     function saveSchedule(scheduleBody) {
-        const user = window.getCurrentUser();
+        const user = getCurrentUser();
         console.log('saveSchedule: user=', user, 'db=', db, 'scheduleBody=', scheduleBody);
         return saveScheduleToFirestore(db, user, scheduleBody);
     }
@@ -165,15 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 window.createClassBlock = createClassBlock;
 window.getFirestoreDB = () => db;
-// ถ้า session.js โหลดก่อนแล้ว window.getCurrentUser มีอยู่แล้ว ไม่ต้องเซ็ตซ้ำ
-// หรือถ้าจะเซ็ต ให้ชี้ไปที่ localStorage ตรงๆ
-window.getCurrentUser = function() {
-    return localStorage.getItem('currentScheduleAppUser');
-};
+// ลบ window.getCurrentUser ออก
 window.getScheduleBody = () => document.getElementById('schedule-body');
 window.saveScheduleToFirestore = () => {
   const db = window.getFirestoreDB();
-  const currentUser = window.getCurrentUser();
+  const currentUser = getCurrentUser();
   const scheduleBody = window.getScheduleBody();
   return saveScheduleToFirestore(db, currentUser, scheduleBody);
 };
@@ -387,7 +386,7 @@ window.db = db;
         const scheduleData = Array.from(allBlocks).map(block => ({ ...block.dataset }));
         const jsonString = JSON.stringify(scheduleData);
         const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
-        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedData}&user=${encodeURIComponent(window.getCurrentUser())}`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedData}&user=${encodeURIComponent(getCurrentUser())}`;
         shareUrlInput.value = shareUrl;
         shareModal.querySelector('.close-btn').onclick = () => shareModal.classList.remove('show');
         shareModal.classList.add('show');
@@ -547,14 +546,14 @@ window.db = db;
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             console.log('Notification permission granted.');
-            await setupNotifications(_firebase, db, window.getCurrentUser(), notificationsBtn, saveTokenToFirestore, updateNotificationButton);
+            await setupNotifications(_firebase, db, getCurrentUser(), notificationsBtn, saveTokenToFirestore, updateNotificationButton);
         } else {
             console.log('Unable to get permission to notify.');
             alert('คุณต้องอนุญาตการแจ้งเตือนในตั้งค่าของเบราว์เซอร์');
         }
     });
     cancelNotificationsBtn.addEventListener('click', async () => {
-        await cancelNotifications(_firebase, db, window.getCurrentUser(), notificationsBtn, updateNotificationButton);
+        await cancelNotifications(_firebase, db, getCurrentUser(), notificationsBtn, updateNotificationButton);
     });
 
     // ฟังก์ชันสำหรับแสดง Notification ผ่าน Service Worker ถ้าได้, ถ้าไม่ได้ fallback เป็น Notification API
@@ -620,14 +619,14 @@ window.db = db;
         e.preventDefault();
         const userId = userIdInput.value.trim();
         if (userId) {
-            localStorage.setItem('currentScheduleAppUser', userId);
+            setCurrentUser(userId);
             location.reload();
         }
     });
 
     logoutBtn.addEventListener('click', () => {
         if (confirm('คุณต้องการออกจากระบบและกลับไปหน้าเลือกผู้ใช้?')) {
-            localStorage.removeItem('currentScheduleAppUser');
+            clearCurrentUser();
             location.reload();
         }
     });
@@ -653,7 +652,7 @@ window.db = db;
             loadScheduleFromFirestore,
             setupNotifications,
             updateCountdown,
-            getCurrentUser: window.getCurrentUser,
+            getCurrentUser, // ใช้ฟังก์ชันที่ import มา
             db,
             createClassBlock,
             setBlockIdCounter: (val) => { blockIdCounter = val; },

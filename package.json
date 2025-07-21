@@ -4,6 +4,11 @@
   "description": "Schedule app with secure Firebase config via env.js",
   "scripts": {
     "prebuild": "node scripts/generate-env.js",
-    "build": "echo 'No build step needed for static site'"
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.0.5"
   }
-} 
+}

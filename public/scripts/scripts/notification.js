@@ -5,19 +5,26 @@ export async function setupNotifications(firebase, db, currentUser, notification
             await navigator.serviceWorker.ready;
         }
         const messaging = firebase.messaging();
-        const currentToken = await messaging.getToken({ vapidKey: 'BDMTIb2DErhAzW9wzREcxfQb-c5vbA39q8OZqQewh-aQtshlT90koKsUVgxezcCwA91HIio1pcqqyaa6ecFOqBk' });
-        if (currentToken) {
-            console.log('FCM Token:', currentToken);
-            await saveTokenToFirestore(db, currentUser, currentToken);
-            updateNotificationButton(notificationsBtn, true);
+        let currentToken = localStorage.getItem('fcmToken');
+        if (!currentToken) {
+            currentToken = await messaging.getToken({ vapidKey: window.env.FIREBASE_VAPID_KEY });
+            if (currentToken) {
+                localStorage.setItem('fcmToken', currentToken);
+                await saveTokenToFirestore(currentToken);
+                updateNotificationButton(true);
+                console.log('FCM Token:', currentToken);
+            } else {
+                updateNotificationButton(false);
+                console.log('No registration token available.');
+            }
         } else {
-            console.log('No registration token available. Request permission to generate one.');
-            updateNotificationButton(notificationsBtn, false);
+            // มี token อยู่แล้ว
+            updateNotificationButton(true);
+            console.log('FCM Token (from cache):', currentToken);
         }
     } catch (err) {
+        updateNotificationButton(false);
         console.error('An error occurred while retrieving token. ', err);
-        notificationsBtn.textContent = 'การแจ้งเตือนมีปัญหา';
-        notificationsBtn.disabled = true;
     }
 }
 
@@ -53,6 +60,10 @@ export async function cancelNotifications(firebase, db, currentUser, notificatio
 }
 
 export function updateNotificationButton(notificationsBtn, isSubscribed) {
+    if (!notificationsBtn || typeof notificationsBtn !== 'object' || !('textContent' in notificationsBtn)) {
+        // ไม่ใช่ element จริง ไม่ต้องทำอะไร
+        return;
+    }
     if (isSubscribed) {
         notificationsBtn.textContent = 'ปิดการแจ้งเตือน';
         notificationsBtn.disabled = false;

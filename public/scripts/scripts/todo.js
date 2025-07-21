@@ -1,3 +1,8 @@
+// เพิ่มฟังก์ชันนี้แทนการอ้างอิง window
+function getCurrentUser() {
+  return localStorage.getItem('currentScheduleAppUser');
+}
+
 // อ่าน subjectName จาก query string
 function getSubjectName() {
   const params = new URLSearchParams(window.location.search);
@@ -12,12 +17,23 @@ const todoInput = document.getElementById('todo-input');
 const todoDue = document.getElementById('todo-due');
 const backBtn = document.getElementById('back-btn');
 
-// Firestore setup
-const db = window.db || (window.firebase && window.firebase.firestore && window.firebase.firestore());
-// ไม่ต้องเก็บ getCurrentUser/currentUser ไว้ต้นไฟล์
+// ลบ import firebase และ firestore ออก
+// import firebase from 'firebase/compat/app';
+// import 'firebase/compat/firestore';
 
-console.log('typeof window.getCurrentUser:', typeof window.getCurrentUser);
-console.log('window.getCurrentUser:', window.getCurrentUser);
+// ใช้ window.firebase และ window.env แทน
+const firebase = window.firebase;
+// const firebaseConfig = window.env;
+if (!firebaseConfig || !firebaseConfig.projectId) {
+  alert('Firebase config (env.js) ไม่ถูกโหลดหรือไม่มีค่า projectId');
+}
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+console.log('typeof getCurrentUser:', typeof getCurrentUser);
+console.log('getCurrentUser:', getCurrentUser);
 console.log('window:', window);
 console.log('todo.js loaded');
 console.log('subjectName:', subjectName);
@@ -28,7 +44,7 @@ console.log('todoInput:', todoInput);
 console.log('todoDue:', todoDue);
 console.log('backBtn:', backBtn);
 console.log('db:', db);
-console.log('currentUser:', window.getCurrentUser && window.getCurrentUser());
+console.log('currentUser:', getCurrentUser());
 
 if (!addTodoForm) {
   alert('ไม่พบฟอร์มเพิ่ม ToDo (addTodoForm)!');
@@ -42,7 +58,7 @@ if (!todoDue) {
 
 async function getTodos() {
   try {
-    const currentUser = window.getCurrentUser && window.getCurrentUser();
+    const currentUser = getCurrentUser();
     if (!db || !currentUser || !subjectName) {
       console.error('getTodos: missing db/currentUser/subjectName', {db, currentUser, subjectName});
       return [];
@@ -61,7 +77,7 @@ async function getTodos() {
 
 async function saveTodos(todos) {
   try {
-    const currentUser = window.getCurrentUser && window.getCurrentUser();
+    const currentUser = getCurrentUser();
     if (!db || !currentUser || !subjectName) {
       console.error('saveTodos: missing db/currentUser/subjectName', {db, currentUser, subjectName});
       return;
