@@ -129,6 +129,19 @@
             <input type="datetime-local" id="todo-due" required>
           </div>
           
+          <!-- เพิ่มตัวเลือก reminder -->
+          <div class="form-group" id="reminder-group">
+            <label>แจ้งเตือนล่วงหน้า:</label>
+            <div class="reminder-checkboxes">
+              <label><input type="checkbox" class="reminder-checkbox" value="24" checked> 1 วัน</label>
+              <label><input type="checkbox" class="reminder-checkbox" value="6" checked> 6 ชม.</label>
+              <label><input type="checkbox" class="reminder-checkbox" value="3" checked> 3 ชม.</label>
+              <label><input type="checkbox" class="reminder-checkbox" value="48"> 2 วัน</label>
+              <label><input type="checkbox" class="reminder-checkbox" value="72"> 3 วัน</label>
+              <label><input type="checkbox" class="reminder-checkbox" value="168"> 7 วัน</label>
+            </div>
+          </div>
+          
           <div class="form-group">
             <label for="todo-priority">ความสำคัญ:</label>
             <select id="todo-priority">
@@ -161,6 +174,9 @@
           </button>
           <button type="button" id="quick-add-btn" class="button-secondary">
             เพิ่มด่วน
+          </button>
+          <button type="button" id="test-reminder-btn" class="button-secondary">
+            ทดสอบแจ้งเตือน
           </button>
         </div>
       </form>

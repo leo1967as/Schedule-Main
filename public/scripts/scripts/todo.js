@@ -1,9 +1,7 @@
-// เพิ่มฟังก์ชันนี้แทนการอ้างอิง window
 function getCurrentUser() {
   return localStorage.getItem('currentScheduleAppUser');
 }
 
-// อ่าน subjectName จาก query string
 function getSubjectName() {
   const params = new URLSearchParams(window.location.search);
   return params.get('name');
@@ -17,13 +15,7 @@ const todoInput = document.getElementById('todo-input');
 const todoDue = document.getElementById('todo-due');
 const backBtn = document.getElementById('back-btn');
 
-// ลบ import firebase และ firestore ออก
-// import firebase from 'firebase/compat/app';
-// import 'firebase/compat/firestore';
-
-// ใช้ window.firebase และ window.env แทน
 const firebase = window.firebase;
-// const firebaseConfig = window.env;
 if (!firebaseConfig || !firebaseConfig.projectId) {
   alert('Firebase config (env.js) ไม่ถูกโหลดหรือไม่มีค่า projectId');
 }
@@ -75,7 +67,8 @@ async function getTodos() {
       priority: todo.priority || 'medium',
       category: todo.category || 'assignment',
       notes: todo.notes || '',
-      completed: typeof todo.completed === 'boolean' ? todo.completed : false
+      completed: typeof todo.completed === 'boolean' ? todo.completed : false,
+      reminders: Array.isArray(todo.reminders) ? todo.reminders : [24,6,3]
     }));
     return todos;
   } catch (err) {
@@ -102,22 +95,18 @@ async function saveTodos(todos) {
 async function renderTodos(filter = 'all', sort = 'date-asc', search = '') {
   try {
     let todos = await getTodos();
-    // Filter
     if (filter === 'pending') todos = todos.filter(t => !t.completed && !isOverdue(t.due));
     else if (filter === 'completed') todos = todos.filter(t => t.completed);
     else if (filter === 'overdue') todos = todos.filter(t => !t.completed && isOverdue(t.due));
-    // Search
     if (search) {
       const s = search.toLowerCase();
       todos = todos.filter(t => t.text.toLowerCase().includes(s) || (t.notes && t.notes.toLowerCase().includes(s)));
     }
-    // Sort
     if (sort === 'date-asc') todos.sort((a, b) => a.due.localeCompare(b.due));
     else if (sort === 'date-desc') todos.sort((a, b) => b.due.localeCompare(a.due));
     else if (sort === 'priority-desc') todos.sort((a, b) => priorityValue(b.priority) - priorityValue(a.priority));
     else if (sort === 'alphabetical') todos.sort((a, b) => a.text.localeCompare(b.text));
 
-    // Render list
     todoList.innerHTML = '';
     if (todos.length === 0) {
       document.getElementById('empty-state').style.display = '';
@@ -126,6 +115,13 @@ async function renderTodos(filter = 'all', sort = 'date-asc', search = '') {
       todos.forEach((todo, idx) => {
         const li = document.createElement('li');
         li.className = todo.completed ? 'completed' : '';
+        // สร้างข้อความ reminder
+        let reminderText = '';
+        if (todo.reminders && todo.reminders.length) {
+          const sorted = [...todo.reminders].sort((a,b)=>b-a);
+          const labelMap = {3:'3 ชม.',6:'6 ชม.',24:'1 วัน',48:'2 วัน',72:'3 วัน',168:'7 วัน'};
+          reminderText = '<small class="todo-reminders">แจ้งเตือน: ' + sorted.map(h=>labelMap[h]||h+'ชม.').join(', ') + ' ก่อน</small>';
+        }
         li.innerHTML = `
           <span class="todo-main">
             <input type="checkbox" class="todo-completed" data-idx="${idx}" ${todo.completed ? 'checked' : ''}>
@@ -133,6 +129,7 @@ async function renderTodos(filter = 'all', sort = 'date-asc', search = '') {
             <span class="todo-category">[${categoryLabel(todo.category)}]</span>
             <span class="todo-priority priority-${todo.priority}">${priorityLabel(todo.priority)}</span>
             <small class="todo-due">${formatDue(todo.due)}</small>
+            ${reminderText}
           </span>
           <span class="todo-actions">
             <button data-idx="${idx}" class="button-danger btn-delete">ลบ</button>
@@ -142,7 +139,6 @@ async function renderTodos(filter = 'all', sort = 'date-asc', search = '') {
         todoList.appendChild(li);
       });
     }
-    // Progress bar & stats
     updateProgressAndStats();
   } catch (err) {
     console.error('Error rendering todos:', err);
@@ -187,9 +183,8 @@ function updateProgressAndStats() {
     const upcoming = allTodos.filter(t => {
       if (!t.due || t.completed) return false;
       const d = new Date(t.due), now = new Date();
-      return d > now && (d-now)<=(3*24*60*60*1000); // 3 วัน
+      return d > now && (d-now)<=(3*24*60*60*1000);
     }).length;
-    // Progress bar
     const fill = document.getElementById('progress-fill');
     if (fill) fill.style.width = total ? (completed/total*100)+'%' : '0%';
     document.getElementById('completed-count').textContent = completed;
@@ -197,6 +192,25 @@ function updateProgressAndStats() {
     document.getElementById('today-count').textContent = today;
     document.getElementById('overdue-count').textContent = overdue;
     document.getElementById('upcoming-count').textContent = upcoming;
+  });
+}
+
+// ฟังก์ชัน schedule notification สำหรับ ToDo
+function scheduleTodoReminders(todo) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = Date.now();
+  if (!todo.due || !todo.reminders) return;
+  const dueTime = new Date(todo.due).getTime();
+  todo.reminders.forEach(hoursBefore => {
+    const notifyTime = dueTime - hoursBefore * 60 * 60 * 1000;
+    if (notifyTime > now) {
+      const timeout = notifyTime - now;
+      setTimeout(() => {
+        new Notification('แจ้งเตือน ToDo', {
+          body: `${todo.text} (${hoursBefore >= 24 ? (hoursBefore/24)+' วัน' : hoursBefore+' ชม.'} ก่อนถึงกำหนดส่ง)`
+        });
+      }, timeout);
+    }
   });
 }
 
@@ -210,25 +224,31 @@ addTodoForm && addTodoForm.addEventListener('submit', async (e) => {
     const priority = document.getElementById('todo-priority')?.value || 'medium';
     const category = document.getElementById('todo-category')?.value || 'assignment';
     const notes = document.getElementById('todo-notes')?.value || '';
-    console.log('submit values:', {text, due, priority, category, notes});
+    // ดึง reminders จาก checkbox
+    const reminderCheckboxes = document.querySelectorAll('.reminder-checkbox');
+    const reminders = Array.from(reminderCheckboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+    console.log('submit values:', {text, due, priority, category, notes, reminders});
     if (!text || !due) {
       alert('กรุณากรอกข้อมูลให้ครบ');
       return;
     }
     const todos = await getTodos();
-    todos.push({ text, due, priority, category, notes, completed: false });
+    todos.push({ text, due, priority, category, notes, completed: false, reminders });
     await saveTodos(todos);
     await renderTodos();
     addTodoForm.reset();
+    // รีเซ็ต reminder เป็น default
+    reminderCheckboxes.forEach(cb => {
+      cb.checked = cb.value==='24'||cb.value==='6'||cb.value==='3';
+    });
+    // schedule notification สำหรับ ToDo ที่เพิ่มล่าสุด
+    scheduleTodoReminders(todos[todos.length-1]);
   } catch (err) {
     console.error('Error in submit handler:', err);
     alert('เกิดข้อผิดพลาดขณะเพิ่ม ToDo');
   }
 });
 
-// --- Event Handlers for new UI ---
-
-// Filter buttons
 ['filter-all','filter-pending','filter-completed','filter-overdue'].forEach(id => {
   const btn = document.getElementById(id);
   if (btn) btn.addEventListener('click', function() {
@@ -249,13 +269,11 @@ function getFilter() {
   if (active.id==='filter-overdue') return 'overdue';
   return 'all';
 }
-// Sort select
 const sortSelect = document.getElementById('sort-select');
 if (sortSelect) sortSelect.addEventListener('change', ()=>renderTodos(getFilter(), getSort(), getSearch()));
 function getSort() {
   return sortSelect ? sortSelect.value : 'date-asc';
 }
-// Search
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search');
 if (searchInput) {
@@ -274,7 +292,6 @@ if (clearSearchBtn) {
 function getSearch() {
   return searchInput ? searchInput.value.trim() : '';
 }
-// Mark completed
 if (todoList) {
   todoList.addEventListener('change', async (e) => {
     if (e.target.classList.contains('todo-completed')) {
@@ -286,13 +303,11 @@ if (todoList) {
     }
   });
 }
-// Delete
 if (todoList) {
   todoList.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-delete')) {
       const idx = e.target.getAttribute('data-idx');
       console.log('btn-delete clicked, idx:', idx);
-      // Modal confirm
       showModal('ยืนยันการลบ', 'คุณต้องการลบ ToDo นี้หรือไม่?', async () => {
         console.log('onConfirm called for delete');
         const todos = await getTodos();
@@ -305,7 +320,6 @@ if (todoList) {
     }
   });
 }
-// Quick Add
 const quickAddBtn = document.getElementById('quick-add-btn');
 if (quickAddBtn) quickAddBtn.addEventListener('click', async ()=>{
   const text = todoInput.value.trim();
@@ -316,7 +330,6 @@ if (quickAddBtn) quickAddBtn.addEventListener('click', async ()=>{
   await renderTodos(getFilter(), getSort(), getSearch());
   addTodoForm.reset();
 });
-// Export
 const exportBtn = document.getElementById('export-btn');
 if (exportBtn) exportBtn.addEventListener('click', async ()=>{
   const todos = await getTodos();
@@ -329,7 +342,6 @@ if (exportBtn) exportBtn.addEventListener('click', async ()=>{
   URL.revokeObjectURL(url);
   showNotification('ส่งออกข้อมูลสำเร็จ');
 });
-// Clear completed
 const clearCompletedBtn = document.getElementById('clear-completed-btn');
 if (clearCompletedBtn) clearCompletedBtn.addEventListener('click', async ()=>{
   showModal('ยืนยันการลบ', 'คุณต้องการลบ ToDo ที่เสร็จแล้วทั้งหมดหรือไม่?', async () => {
@@ -339,7 +351,6 @@ if (clearCompletedBtn) clearCompletedBtn.addEventListener('click', async ()=>{
     await renderTodos(getFilter(), getSort(), getSearch());
   });
 });
-// Modal
 function showModal(title, message, onConfirm) {
   const overlay = document.getElementById('modal-overlay');
   const modalTitle = document.getElementById('modal-title');
@@ -364,7 +375,6 @@ function showModal(title, message, onConfirm) {
   confirmBtn.addEventListener('click', onOk);
   cancelBtn.addEventListener('click', onCancel);
 }
-// Notification
 function showNotification(msg, type='success') {
   const container = document.getElementById('notification-container');
   if (!container) return;
@@ -383,13 +393,8 @@ backBtn && backBtn.addEventListener('click', () => {
   }
 });
 
-// ตั้งชื่อวิชา
 subjectTitle.textContent = subjectName ? `ToDo: ${subjectName}` : 'ToDo วิชา';
 
-// Remove the original renderTodos();
-// renderTodos();
-
-// Add async IIFE to control loading
 (async function() {
   const appContainer = document.getElementById('todo-app-container');
   const loadingOverlay = document.getElementById('loading-overlay');
@@ -400,4 +405,21 @@ subjectTitle.textContent = subjectName ? `ToDo: ${subjectName}` : 'ToDo วิ�
 
   if (appContainer) appContainer.style.display = '';
   if (loadingOverlay) loadingOverlay.style.display = 'none';
-})(); 
+})();
+
+// Event: ปุ่มทดสอบแจ้งเตือน
+const testReminderBtn = document.getElementById('test-reminder-btn');
+if (testReminderBtn) testReminderBtn.addEventListener('click', () => {
+  const text = todoInput.value.trim() || 'ตัวอย่าง ToDo';
+  const due = todoDue.value || new Date(Date.now() + 60*60*1000).toISOString().slice(0,16); // default 1 ชม.ข้างหน้า
+  const priority = document.getElementById('todo-priority')?.value || 'medium';
+  const category = document.getElementById('todo-category')?.value || 'assignment';
+  const notes = document.getElementById('todo-notes')?.value || '';
+  const reminderCheckboxes = document.querySelectorAll('.reminder-checkbox');
+  const reminders = Array.from(reminderCheckboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+  if (!reminders.length) return alert('กรุณาเลือกช่วงเวลาแจ้งเตือนอย่างน้อย 1 ตัวเลือก');
+  // สร้าง todo จำลอง
+  const todo = { text, due, priority, category, notes, completed: false, reminders };
+  scheduleTodoReminders(todo);
+  showNotification('ทดสอบแจ้งเตือนถูกตั้งค่าแล้ว (จะเด้งตามเวลาที่เลือก)', 'success');
+}); 

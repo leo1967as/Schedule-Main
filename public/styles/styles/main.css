@@ -150,34 +150,7 @@ h1 {
 /* ==========================================================================
    4. Modal (หน้าต่างป๊อปอัป) และฟอร์ม
    ========================================================================== */
-   .modal {
-    display: block !important;
-    background: white !important;
-    color: black !important;
-    position: relative !important;
-    z-index: 10001 !important;
-    width: 400px !important;
-    max-width: 90vw !important;
-    min-height: 100px !important;
-    border: 2px solid red !important;
-    padding: 2rem !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
 
-.modal.show {
-    display: flex;
-}
-
-.modal-content {
-    background-color: #fefefe;
-    padding: 20px 30px;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 400px;
-    position: relative;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-}
 
 .close-btn {
     position: absolute;
@@ -520,3 +493,48 @@ h1 {
 #test-random-noti-btn {
   margin-left: 8px;
 }
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000; /* สูงกว่า .modal */
+}
+.modal-overlay .modal {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  min-width: 320px;
+  max-width: 90vw;
+  min-height: 100px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  position: relative;
+  z-index: 20001;
+}
+.modal.show {
+  display: flex;
+}
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  min-width: 320px;
+  max-width: 90vw;
+  min-height: 100px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  position: relative;
+  z-index: 10002;
+}
+
+#add-class-modal {
+  display: none;
+}
+#add-class-modal.show {
+  display: flex; /* หรือ block ตาม layout ที่ต้องการ */
+}
+
+#share-modal { display: none; }
+#share-modal.show { display: flex; }
